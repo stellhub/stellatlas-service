@@ -2,10 +2,7 @@ module github.com/stellhub/stellatlas-service
 
 go 1.25.9
 
-require (
-	github.com/redis/go-redis/v9 v9.20.1
-	github.com/stellhub/stellar v0.0.2
-)
+require github.com/stellhub/stellar v0.0.2
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
@@ -59,6 +56,7 @@ require (
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.20.1 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.20.1 // indirect
+	github.com/redis/go-redis/v9 v9.20.1 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

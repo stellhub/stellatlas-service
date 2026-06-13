@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	goredis "github.com/redis/go-redis/v9"
+	"github.com/stellhub/stellar"
 )
 
 type RedisCacheOptions struct {
@@ -19,13 +19,13 @@ type RedisCacheOptions struct {
 }
 
 type RedisCache struct {
-	client               *goredis.Client
+	client               *stellar.RedisClient
 	prefix               string
 	applicationListTTL   time.Duration
 	applicationOwnersTTL time.Duration
 }
 
-func NewRedisCache(client *goredis.Client, options RedisCacheOptions) Cache {
+func NewRedisCache(client *stellar.RedisClient, options RedisCacheOptions) Cache {
 	if client == nil {
 		return nil
 	}
@@ -104,11 +104,16 @@ func (c *RedisCache) InvalidateApplications(ctx context.Context, identifiers ...
 }
 
 func (c *RedisCache) getJSON(ctx context.Context, key string, target any) (bool, error) {
+	exists, err := c.client.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	if exists == 0 {
+		return false, nil
+	}
+
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
-		if err == goredis.Nil {
-			return false, nil
-		}
 		return false, err
 	}
 	if err := json.Unmarshal(data, target); err != nil {

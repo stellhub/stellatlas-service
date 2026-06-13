@@ -1,0 +1,55 @@
+app:
+  name: stellatlas-service
+  env: dev
+  zone: local
+  version: v0.1.0
+  metadata:
+    product: StellAtlas
+    role: cmdb-service
+
+http:
+  server:
+    enabled: true
+    port: 8080
+    adapter: chi
+    observability:
+      trace: true
+      metrics: true
+      logs: true
+
+redis:
+  enabled: true
+  addr: 192.168.1.14:6379
+  db: 0
+  pool_size: 16
+  debug_api:
+    enabled: false
+    prefix: /redis
+  observability:
+    trace: true
+    metrics: true
+    logs: false
+
+postgresql:
+  enabled: true
+  dsn: postgres://stellhub:admin@192.168.1.14:5432/stellatlas-service?sslmode=disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+  conn_max_idle_time: 5m
+  ping_on_startup: false
+  debug_api:
+    enabled: false
+    prefix: /postgresql
+  observability:
+    trace: true
+    metrics: true
+    logs: false
+
+opentelemetry:
+  log:
+    enabled: false
+    output: stdout
+  trace: false
+  metrics: false
+  trace_output: none

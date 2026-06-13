@@ -1,66 +1,88 @@
 package server
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
 	"net/http"
-	"time"
+
+	"github.com/stellhub/stellar"
+	"github.com/stellhub/stellatlas-service/internal/cmdb"
 )
 
 const serviceName = "stellatlas-service"
 
-type healthResponse struct {
-	Service string `json:"service"`
-	Status  string `json:"status"`
+type Starter struct {
+	config  stellar.Config
+	service *cmdb.Service
 }
 
-type statusResponse struct {
-	Service     string `json:"service"`
-	Product     string `json:"product"`
-	Role        string `json:"role"`
-	Description string `json:"description"`
-	Timestamp   string `json:"timestamp"`
+func NewStarter() *Starter {
+	return &Starter{}
 }
 
-// NewHandler builds the HTTP handler for StellAtlas service.
+func (s *Starter) Name() string {
+	return "stellatlas-api"
+}
+
+func (s *Starter) Condition(ctx stellar.StarterContext) bool {
+	s.config = ctx.Config()
+	return true
+}
+
+func (s *Starter) Init(_ context.Context, app *stellar.App) error {
+	var repository cmdb.Repository
+	if db, ok := app.PostgreSQLDB(); ok {
+		repository = cmdb.NewPostgreSQLRepository(db)
+	}
+
+	var cache cmdb.Cache
+	if client, ok := app.RedisClient(); ok {
+		cache = cmdb.NewRedisCache(client, cmdb.RedisCacheOptions{
+			Prefix: "cmdb",
+		})
+	}
+
+	s.service = cmdb.NewService(repository, cache)
+	registerRoutes(app.HTTP(), s.config, s.service)
+	return nil
+}
+
+func (s *Starter) Start(context.Context) error {
+	return nil
+}
+
+func (s *Starter) Stop(context.Context) error {
+	return nil
+}
+
+func (s *Starter) Health(context.Context) stellar.HealthCheck {
+	return stellar.HealthCheck{
+		Name:    s.Name(),
+		Status:  stellar.HealthStatusUp,
+		Message: "StellAtlas API routes registered",
+	}
+}
+
 func NewHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", onlyMethod(http.MethodGet, handleHealth))
-	mux.HandleFunc("/api/stellatlas/v1/status", onlyMethod(http.MethodGet, handleStatus))
-	return mux
+	app := stellar.New(defaultConfig(), stellar.WithStarter(NewStarter()))
+	if err := app.Start(context.Background()); err != nil {
+		return startupErrorHandler{err: err}
+	}
+	return app.Handler()
 }
 
-func handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, healthResponse{
-		Service: serviceName,
-		Status:  "ok",
-	})
-}
-
-func handleStatus(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, statusResponse{
-		Service:     serviceName,
-		Product:     "StellAtlas",
-		Role:        "Configuration Management Database service",
-		Description: "Manages configuration items, asset inventory, topology relationships, and lifecycle metadata for the Stell platform.",
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-	})
-}
-
-func onlyMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != method {
-			w.Header().Set("Allow", method)
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-			return
-		}
-		handler(w, r)
+func defaultConfig() stellar.Config {
+	return stellar.Config{
+		AppName:     serviceName,
+		Environment: stellar.EnvDev,
+		Zone:        "local",
 	}
 }
 
-func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	}
+type startupErrorHandler struct {
+	err error
+}
+
+func (h startupErrorHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	http.Error(w, fmt.Sprintf("start StellAtlas handler: %v", h.err), http.StatusInternalServerError)
 }

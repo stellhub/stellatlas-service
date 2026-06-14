@@ -19,7 +19,7 @@ http:
 
 redis:
   enabled: true
-  addr: 192.168.1.14:6379
+  addr: 127.0.0.1:6379
   db: 0
   pool_size: 16
   debug_api:
@@ -32,7 +32,7 @@ redis:
 
 postgresql:
   enabled: true
-  dsn: postgres://stellhub:admin@192.168.1.14:5432/stellatlas-service?sslmode=disable
+  dsn: postgres://stellhub:admin@127.0.0.1:5432/stellatlas-service?sslmode=disable
   max_open_conns: 25
   max_idle_conns: 5
   conn_max_lifetime: 30m

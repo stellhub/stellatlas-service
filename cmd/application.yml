@@ -10,8 +10,8 @@ app:
 http:
   server:
     enabled: true
-    port: 8080
-    adapter: chi
+    port: 8010
+    adapter: gin
     observability:
       trace: true
       metrics: true
